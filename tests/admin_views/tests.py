@@ -3142,7 +3142,7 @@ class AdminViewListEditable(TestCase):
         # CSRF field = 1
         # field to track 'select all' across paginated views = 1
         # 6 + 4 + 4 + 1 + 2 + 1 + 1 = 19 inputs
-        self.assertContains(response, "<input", count=19)
+        self.assertContains(response, "<input", count=20)
         # 1 select per object = 3 selects
         self.assertContains(response, "<select", count=4)
 
@@ -3541,6 +3541,7 @@ class AdminSearchTest(TestCase):
         cls.per2 = Person.objects.create(name='Grace Hopper', gender=1, alive=False)
         cls.per3 = Person.objects.create(name='Guido van Rossum', gender=1, alive=True)
         Person.objects.create(name='John Doe', gender=1)
+        Person.objects.create(name='John O"Hara', gender=1)
         Person.objects.create(name="John O'Hara", gender=1)
 
         cls.t1 = Recommender.objects.create()
@@ -3616,7 +3617,7 @@ class AdminSearchTest(TestCase):
             response = self.client.get(reverse('admin:admin_views_person_changelist') + '?q=Gui')
         self.assertContains(
             response,
-            """<span class="small quiet">1 result (<a href="?">5 total</a>)</span>""",
+            """<span class="small quiet">1 result (<a href="?">6 total</a>)</span>""",
             html=True
         )
 
@@ -3647,7 +3648,10 @@ class AdminSearchTest(TestCase):
             ("John Doe John", 0),
             ('"John Do"', 1),
             ("'John Do'", 1),
+            ("'John O\'Hara'", 0),
             ("'John O\\'Hara'", 1),
+            ('"John O\"Hara"', 0),
+            ('"John O\\"Hara"', 1),
         ]
         for search, hits in tests:
             with self.subTest(search=search):
@@ -4980,7 +4984,7 @@ class ReadonlyTest(AdminFieldExtractionMixin, TestCase):
         self.assertNotContains(response, 'name="posted"')
         # 3 fields + 2 submit buttons + 5 inline management form fields, + 2
         # hidden fields for inlines + 1 field for the inline + 2 empty form
-        self.assertContains(response, "<input", count=15)
+        self.assertContains(response, "<input", count=16)
         self.assertContains(response, formats.localize(datetime.date.today()))
         self.assertContains(response, "<label>Awesomeness level:</label>")
         self.assertContains(response, "Very awesome.")

@@ -595,7 +595,18 @@ class DiscoverRunner:
             if tests.countTestCases():
                 return tests
         # Try discovery if "label" is a package or directory.
-        if not is_discoverable(label):
+        is_importable, is_package = try_importing(label)
+        if is_importable:
+            if not is_package:
+                return tests
+        elif not os.path.isdir(label_as_path):
+            if os.path.exists(label_as_path):
+                assert tests is None
+                raise RuntimeError(
+                    f'One of the test labels is a path to a file: {label!r}, '
+                    f'which is not supported. Use a dotted module name '
+                    f'instead.'
+                )
             return tests
 
         kwargs = discover_kwargs.copy()
@@ -639,7 +650,9 @@ class DiscoverRunner:
         # _FailedTest objects include things like test modules that couldn't be
         # found or that couldn't be loaded due to syntax errors.
         test_types = (unittest.loader._FailedTest, *self.reorder_by)
-        all_tests = reorder_tests(all_tests, test_types, self.reverse)
+        all_tests = list(reorder_tests(all_tests, test_types, self.reverse))
+        if self.verbosity >= 1:
+            print('Found %d tests.' % len(all_tests))
         suite = self.test_suite(all_tests)
 
         if self.parallel > 1:
@@ -774,20 +787,18 @@ class DiscoverRunner:
         return self.suite_result(suite, result)
 
 
-def is_discoverable(label):
+def try_importing(label):
     """
-    Check if a test label points to a Python package or file directory.
+    Try importing a test label, and return (is_importable, is_package).
 
     Relative labels like "." and ".." are seen as directories.
     """
     try:
         mod = import_module(label)
     except (ImportError, TypeError):
-        pass
-    else:
-        return hasattr(mod, '__path__')
+        return (False, False)
 
-    return os.path.isdir(os.path.abspath(label))
+    return (True, hasattr(mod, '__path__'))
 
 
 def find_top_level(top_level):

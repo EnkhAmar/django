@@ -83,6 +83,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
                 "the sqlite backend's close() method is a no-op when using an "
                 "in-memory database": {
                     'servers.test_liveserverthread.LiveServerThreadTest.test_closes_connections',
+                    'servers.tests.LiveServerTestCloseConnectionTest.test_closes_connections',
                 },
             })
         return skips
@@ -117,3 +118,9 @@ class DatabaseFeatures(BaseDatabaseFeatures):
 
     can_introspect_json_field = property(operator.attrgetter('supports_json_field'))
     has_json_object_function = property(operator.attrgetter('supports_json_field'))
+
+    @cached_property
+    def can_return_columns_from_insert(self):
+        return Database.sqlite_version_info >= (3, 35)
+
+    can_return_rows_from_bulk_insert = property(operator.attrgetter('can_return_columns_from_insert'))

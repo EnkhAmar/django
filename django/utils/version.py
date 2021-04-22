@@ -3,7 +3,8 @@ import functools
 import os
 import subprocess
 import sys
-from distutils.version import LooseVersion
+
+from django.utils.regex_helper import _lazy_re_compile
 
 # Private, stable API for detecting the Python version. PYXY means "Python X.Y
 # or later". So that third-party apps can use these values, each constant
@@ -77,9 +78,13 @@ def get_git_changeset():
     This value isn't guaranteed to be unique, but collisions are very unlikely,
     so it's sufficient for generating the development version numbers.
     """
+    # Repository may not be found if __file__ is undefined, e.g. in a frozen
+    # module.
+    if '__file__' not in globals():
+        return None
     repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     git_log = subprocess.run(
-        ['git', 'log', '--pretty=format:%ct', '--quiet', '-1', 'HEAD'],
+        'git log --pretty=format:%ct --quiet -1 HEAD',
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         shell=True, cwd=repo_dir, universal_newlines=True,
     )
@@ -91,15 +96,21 @@ def get_git_changeset():
     return timestamp.strftime('%Y%m%d%H%M%S')
 
 
+version_component_re = _lazy_re_compile(r'(\d+|[a-z]+|\.)')
+
+
 def get_version_tuple(version):
     """
     Return a tuple of version numbers (e.g. (1, 2, 3)) from the version
     string (e.g. '1.2.3').
     """
-    loose_version = LooseVersion(version)
     version_numbers = []
-    for item in loose_version.version:
-        if not isinstance(item, int):
-            break
-        version_numbers.append(item)
+    for item in version_component_re.split(version):
+        if item and item != '.':
+            try:
+                component = int(item)
+            except ValueError:
+                break
+            else:
+                version_numbers.append(component)
     return tuple(version_numbers)
