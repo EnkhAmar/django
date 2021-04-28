@@ -56,3 +56,15 @@ Bugfixes
   with subqueries that began manifesting in Django 3.2, due to a separate fix
   using ``Exists`` to ``exclude()`` multi-valued relationships
   (:ticket:`32650`).
+
+* Fixed a bug in Django 3.2 where variable lookup errors were logged when
+  rendering some admin templates (:ticket:`32681`).
+
+* Fixed a bug in Django 3.2 where an admin changelist would crash when deleting
+  objects filtered against multi-valued relationships (:ticket:`32682`). The
+  admin changelist now uses ``Exists()`` instead ``QuerySet.distinct()``
+  because calling ``delete()`` after ``distinct()`` is not allowed in Django
+  3.2 to address a data loss possibility.
+
+* Fixed a regression in Django 3.2 where the calling process environment would
+  not be passed to the ``dbshell`` command on PostgreSQL (:ticket:`32687`).
